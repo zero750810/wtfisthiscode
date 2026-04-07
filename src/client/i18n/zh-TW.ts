@@ -4,7 +4,7 @@ export default {
     apiKeyMissing: 'API Key',
     apiKeyLabel: 'Gemini API Key',
     apiKeyPlaceholder: 'AIzaSy...',
-    apiKeyHint: 'Key 只存在你的瀏覽器，不會傳到我們的伺服器',
+    apiKeyHint: '僅支援 Gemini API Key，可至 Google AI Studio 免費申請',
   },
   editor: {
     placeholder: '// 在這裡貼上你的程式碼...',
