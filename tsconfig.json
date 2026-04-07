@@ -1,21 +1,21 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "strict": true,
-    "jsx": "preserve",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "noEmit": true,
     "paths": {
       "@/*": ["./src/client/*"],
       "@server/*": ["./src/server/*"]
     },
-    "types": ["@cloudflare/workers-types/2023-07-01"]
+    "resolveJsonModule": true,
+    "types": ["@cloudflare/workers-types/2023-07-01"],
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts"],
   "exclude": ["node_modules", "dist"]

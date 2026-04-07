@@ -34,17 +34,24 @@ analyzeRoute.post('/analyze', async (c) => {
   const language = VALID_LANGUAGES.includes(body.language) ? body.language : 'auto'
   const diagramType = VALID_DIAGRAM_TYPES.includes(body.diagramType) ? body.diagramType : 'flow'
 
+  const apiKey = c.req.header('X-API-Key') || c.env.GEMINI_API_KEY
+  if (!apiKey) {
+    return c.json({ error: '缺少 API Key' }, 401)
+  }
+
   try {
     const result = await analyzeCode({
       code: body.code,
       language,
       diagramType,
-      apiKey: c.env.GEMINI_API_KEY,
+      apiKey,
     })
 
     return c.json(result)
   }
-  catch {
-    return c.json({ error: '分析失敗，請稍後再試' }, 500)
+  catch (e) {
+    console.error('Analyze error:', e)
+    const message = e instanceof Error ? e.message : '分析失敗，請稍後再試'
+    return c.json({ error: message }, 500)
   }
 })

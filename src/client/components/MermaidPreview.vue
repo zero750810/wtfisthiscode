@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import mermaid from 'mermaid'
 import { nextTick, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAnalyzeStore } from '../stores/useAnalyze'
 
 const store = useAnalyzeStore()
+const { t } = useI18n()
 const containerRef = ref<HTMLDivElement>()
 const mermaidCode = ref('')
 const showCode = ref(false)
 const copied = ref(false)
+const renderError = ref('')
+let renderCount = 0
 
 onMounted(() => {
   mermaid.initialize({
@@ -22,18 +26,28 @@ watch(() => store.result?.mermaid, async (code) => {
   if (!code || !containerRef.value)
     return
   mermaidCode.value = code
+  renderError.value = ''
 
   try {
-    const { svg } = await mermaid.render('mermaid-diagram', code)
+    const id = `mermaid-diagram-${++renderCount}`
+    const { svg } = await mermaid.render(id, code)
     await nextTick()
     if (containerRef.value) {
       containerRef.value.innerHTML = svg
+      // Make SVG fill the container and be scrollable
+      const svgEl = containerRef.value.querySelector('svg')
+      if (svgEl) {
+        svgEl.removeAttribute('height')
+        svgEl.style.maxWidth = '100%'
+        svgEl.style.height = 'auto'
+        svgEl.style.minHeight = '300px'
+      }
     }
   }
-  catch {
-    if (containerRef.value) {
-      containerRef.value.innerHTML = '<p class="text-red-400 p-4">Mermaid 語法解析失敗</p>'
-    }
+  catch (e) {
+    console.error('Mermaid render error:', e)
+    renderError.value = e instanceof Error ? e.message : String(e)
+    showCode.value = true
   }
 })
 
@@ -57,14 +71,14 @@ async function copyMermaid() {
         :class="!showCode ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'"
         @click="showCode = false"
       >
-        預覽
+        {{ t('preview.preview') }}
       </button>
       <button
         class="rounded px-3 py-1 text-sm transition-colors"
         :class="showCode ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'"
         @click="showCode = true"
       >
-        Mermaid 語法
+        {{ t('preview.mermaidSyntax') }}
       </button>
       <div class="flex-1" />
       <button
@@ -72,22 +86,27 @@ async function copyMermaid() {
         class="rounded px-3 py-1 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
         @click="copyMermaid"
       >
-        {{ copied ? '已複製!' : '複製語法' }}
+        {{ copied ? t('preview.copied') : t('preview.copySyntax') }}
       </button>
     </div>
 
     <!-- Content -->
     <div class="flex-1 overflow-auto p-4">
       <!-- Mermaid rendered preview -->
-      <div v-show="!showCode" ref="containerRef" class="flex items-center justify-center [&>svg]:max-w-full" />
+      <div v-show="!showCode" ref="containerRef" class="flex items-start justify-center" />
 
       <!-- Mermaid source code -->
-      <pre v-show="showCode" class="whitespace-pre-wrap rounded-lg bg-zinc-900 p-4 text-sm text-zinc-300">{{ mermaidCode }}</pre>
+      <div v-show="showCode">
+        <p v-if="renderError" class="mb-3 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          {{ t('preview.renderError') }}：{{ renderError }}
+        </p>
+        <pre class="whitespace-pre-wrap rounded-lg bg-zinc-900 p-4 text-sm text-zinc-300">{{ mermaidCode }}</pre>
+      </div>
 
       <!-- Empty state -->
       <div v-if="!store.result && !store.loading" class="flex h-full items-center justify-center">
         <p class="text-zinc-500">
-          貼上程式碼後按下「生成視覺化」，流程圖會出現在這裡
+          {{ t('preview.emptyHint') }}
         </p>
       </div>
 

@@ -76,7 +76,10 @@ ${params.code}
 2. 節點 id 使用英文和底線，不要用中文
 3. Mermaid 語法中的節點文字可以用中文
 4. 確保 edges 中的 from 和 to 都對應到 nodes 中存在的 id
-5. 只回傳 JSON，不要有任何其他文字`
+5. 只回傳 JSON，不要有任何其他文字
+6. Mermaid 節點標籤中禁止使用括號等特殊字元，這些字元在 Mermaid 中有特殊意義會導致解析錯誤。例如：用 "fibonacci n" 而非 "fibonacci(n)"，用 "i 從 2 到 n" 而非 "i=2; i<=n"
+7. Mermaid 節點標籤若含有特殊字元，必須用雙引號包裹，例如：A["標籤 (含括號)"]
+8. Mermaid 節點 id 不可使用保留字：end、subgraph、graph、flowchart、classDef、click、style。用 node_end 或 finish 取代 end`
 }
 
 const MD_BLOCK_START = /^```(?:json)?\s*/i
@@ -94,7 +97,11 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 32768,
+          responseMimeType: 'application/json',
+          thinkingConfig: {
+            thinkingBudget: 4096,
+          },
         },
       }),
     },
@@ -107,20 +114,51 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
   }
 
   const data = await res.json() as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[]
+    candidates?: {
+      content?: {
+        parts?: { text?: string, thought?: boolean }[]
+      }
+      finishReason?: string
+    }[]
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  const candidate = data.candidates?.[0]
+  if (candidate?.finishReason === 'MAX_TOKENS') {
+    throw new Error('程式碼太複雜，AI 回應被截斷，請縮短程式碼再試')
+  }
+
+  // Gemini 2.5 Flash is a thinking model — skip thought parts, take the actual answer
+  const parts = candidate?.content?.parts ?? []
+  const text = parts
+    .filter(p => !p.thought && p.text)
+    .map(p => p.text)
+    .join('')
+
   if (!text) {
     throw new Error('Gemini 未回傳有效內容')
   }
 
-  const cleaned = text
+  // Strip markdown code blocks if present
+  let cleaned = text
     .replace(MD_BLOCK_START, '')
     .replace(MD_BLOCK_END, '')
     .trim()
 
-  const result = JSON.parse(cleaned) as AnalysisResult
+  // Model may output reasoning text before the JSON — extract the JSON object
+  const jsonStart = cleaned.indexOf('{')
+  const jsonEnd = cleaned.lastIndexOf('}')
+  if (jsonStart !== -1 && jsonEnd > jsonStart) {
+    cleaned = cleaned.slice(jsonStart, jsonEnd + 1)
+  }
+
+  let result: AnalysisResult
+  try {
+    result = JSON.parse(cleaned) as AnalysisResult
+  }
+  catch {
+    console.error('JSON parse failed, raw text:', cleaned.slice(0, 500))
+    throw new Error('AI 回傳格式異常，請再試一次')
+  }
 
   // Basic validation
   if (!result.nodes || !result.edges || !result.mermaid) {

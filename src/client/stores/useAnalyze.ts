@@ -1,19 +1,10 @@
 import type { AnalysisResult, DiagramType, SupportedLanguage } from '../types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-const LOADING_MESSAGES = [
-  '正在解讀這坨義大利麵...',
-  '天啊，誰寫的...',
-  '正在試著理解你同事的傑作...',
-  '這個 nested if 有幾層啊...',
-  '找到 17 個 TODO，0 個 DONE...',
-  '正在追蹤變數去了哪裡...',
-  '這個 callback hell 有點深...',
-  '正在翻譯工程師的藝術品...',
-]
+import { useI18n } from 'vue-i18n'
 
 export const useAnalyzeStore = defineStore('analyze', () => {
+  const { t, tm } = useI18n()
   const code = ref('')
   const language = ref<SupportedLanguage | 'auto'>('auto')
   const diagramType = ref<DiagramType>('flow')
@@ -21,13 +12,19 @@ export const useAnalyzeStore = defineStore('analyze', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const loadingMessage = ref('')
+  const apiKey = ref(localStorage.getItem('gemini-api-key') ?? '')
 
   let messageInterval: ReturnType<typeof setInterval> | null = null
 
+  function pickLoadingMessage() {
+    const messages = tm('loading.messages') as string[]
+    return messages[Math.floor(Math.random() * messages.length)]
+  }
+
   function startLoadingMessages() {
-    loadingMessage.value = LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]
+    loadingMessage.value = pickLoadingMessage()
     messageInterval = setInterval(() => {
-      loadingMessage.value = LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)]
+      loadingMessage.value = pickLoadingMessage()
     }, 2500)
   }
 
@@ -39,9 +36,24 @@ export const useAnalyzeStore = defineStore('analyze', () => {
     loadingMessage.value = ''
   }
 
+  function saveApiKey(key: string) {
+    apiKey.value = key
+    if (key) {
+      localStorage.setItem('gemini-api-key', key)
+    }
+    else {
+      localStorage.removeItem('gemini-api-key')
+    }
+  }
+
   async function analyze() {
     if (!code.value.trim()) {
-      error.value = '請先貼上程式碼'
+      error.value = t('editor.pasteFirst')
+      return
+    }
+
+    if (!apiKey.value.trim()) {
+      error.value = t('editor.apiKeyRequired')
       return
     }
 
@@ -51,9 +63,14 @@ export const useAnalyzeStore = defineStore('analyze', () => {
     startLoadingMessages()
 
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey.value.trim(),
+      }
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           code: code.value,
           language: language.value,
@@ -85,6 +102,8 @@ export const useAnalyzeStore = defineStore('analyze', () => {
     loading,
     error,
     loadingMessage,
+    apiKey,
+    saveApiKey,
     analyze,
   }
 })

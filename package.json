@@ -1,10 +1,12 @@
 {
   "name": "wtfisthiscode",
-  "private": true,
   "type": "module",
   "version": "0.0.1",
+  "private": true,
   "scripts": {
-    "dev": "vite",
+    "dev": "vite build --mode worker && concurrently -n fe,api -c cyan,green \"vite\" \"wrangler dev\"",
+    "dev:fe": "vite",
+    "dev:api": "vite build --mode worker && wrangler dev",
     "build": "vite build && vite build --mode worker",
     "preview": "wrangler dev",
     "lint": "eslint .",
@@ -26,6 +28,7 @@
     "mermaid": "^11.14.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",
+    "vue-i18n": "^11.3.1",
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
@@ -33,6 +36,7 @@
     "@cloudflare/workers-types": "^4.20260405.1",
     "@tailwindcss/vite": "^4.2.2",
     "@vitejs/plugin-vue": "^6.0.5",
+    "concurrently": "^9.2.1",
     "eslint": "^10.2.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
