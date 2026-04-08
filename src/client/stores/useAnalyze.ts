@@ -2,6 +2,7 @@ import type { AnalysisResult, DiagramType, SupportedLanguage, SupportedModel } f
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { generateMermaid } from '../utils/mermaidGenerator'
 
 export const useAnalyzeStore = defineStore('analyze', () => {
   const { t, tm } = useI18n()
@@ -9,7 +10,9 @@ export const useAnalyzeStore = defineStore('analyze', () => {
   const language = ref<SupportedLanguage | 'auto'>('auto')
   const diagramType = ref<DiagramType>('flow')
   const result = ref<AnalysisResult | null>(null)
+  const mermaidCode = ref('')
   const loading = ref(false)
+  const elapsed = ref(0)
   const error = ref<string | null>(null)
   const loadingMessage = ref('')
   const apiKey = ref(localStorage.getItem('gemini-api-key') ?? '')
@@ -66,7 +69,11 @@ export const useAnalyzeStore = defineStore('analyze', () => {
     loading.value = true
     error.value = null
     result.value = null
+    mermaidCode.value = ''
+    elapsed.value = 0
     startLoadingMessages()
+
+    const startTime = Date.now()
 
     try {
       const headers: Record<string, string> = {
@@ -90,12 +97,15 @@ export const useAnalyzeStore = defineStore('analyze', () => {
         throw new Error((data as { error: string }).error || `HTTP ${res.status}`)
       }
 
-      result.value = await res.json() as AnalysisResult
+      const data = await res.json() as AnalysisResult
+      result.value = data
+      mermaidCode.value = generateMermaid(data.nodes, data.edges, diagramType.value)
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : '未知錯誤'
     }
     finally {
+      elapsed.value = ((Date.now() - startTime) / 1000)
       loading.value = false
       stopLoadingMessages()
     }
@@ -106,7 +116,9 @@ export const useAnalyzeStore = defineStore('analyze', () => {
     language,
     diagramType,
     result,
+    mermaidCode,
     loading,
+    elapsed,
     error,
     loadingMessage,
     apiKey,

@@ -7,7 +7,6 @@ import { useAnalyzeStore } from '../stores/useAnalyze'
 const store = useAnalyzeStore()
 const { t } = useI18n()
 const containerRef = ref<HTMLDivElement>()
-const mermaidCode = ref('')
 const showCode = ref(false)
 const copied = ref(false)
 const renderError = ref('')
@@ -22,10 +21,9 @@ onMounted(() => {
   })
 })
 
-watch(() => store.result?.mermaid, async (code) => {
+watch(() => store.mermaidCode, async (code) => {
   if (!code || !containerRef.value)
     return
-  mermaidCode.value = code
   renderError.value = ''
 
   try {
@@ -34,7 +32,6 @@ watch(() => store.result?.mermaid, async (code) => {
     await nextTick()
     if (containerRef.value) {
       containerRef.value.innerHTML = svg
-      // Make SVG fill the container and be scrollable
       const svgEl = containerRef.value.querySelector('svg')
       if (svgEl) {
         svgEl.removeAttribute('height')
@@ -52,9 +49,9 @@ watch(() => store.result?.mermaid, async (code) => {
 })
 
 async function copyMermaid() {
-  if (!mermaidCode.value)
+  if (!store.mermaidCode)
     return
-  await navigator.clipboard.writeText(mermaidCode.value)
+  await navigator.clipboard.writeText(store.mermaidCode)
   copied.value = true
   setTimeout(() => {
     copied.value = false
@@ -80,9 +77,12 @@ async function copyMermaid() {
       >
         {{ t('preview.mermaidSyntax') }}
       </button>
+      <span v-if="store.elapsed" class="text-xs text-zinc-500">
+        {{ store.elapsed.toFixed(1) }}s
+      </span>
       <div class="flex-1" />
       <button
-        v-if="mermaidCode"
+        v-if="store.mermaidCode"
         class="rounded px-3 py-1 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
         @click="copyMermaid"
       >
@@ -100,7 +100,7 @@ async function copyMermaid() {
         <p v-if="renderError" class="mb-3 rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">
           {{ t('preview.renderError') }}：{{ renderError }}
         </p>
-        <pre class="whitespace-pre-wrap rounded-lg bg-zinc-900 p-4 text-sm text-zinc-300">{{ mermaidCode }}</pre>
+        <pre class="whitespace-pre-wrap rounded-lg bg-zinc-900 p-4 text-sm text-zinc-300">{{ store.mermaidCode }}</pre>
       </div>
 
       <!-- Empty state -->

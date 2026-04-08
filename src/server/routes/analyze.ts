@@ -10,7 +10,7 @@ export const analyzeRoute = new Hono<{ Bindings: Env }>()
 const MAX_CODE_LENGTH = 10000
 const VALID_LANGUAGES = ['auto', 'javascript', 'typescript', 'python', 'go', 'rust', 'java', 'csharp']
 const VALID_DIAGRAM_TYPES = ['flow', 'callgraph', 'dataflow', 'structure']
-const VALID_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemma-4-31b-it']
+const VALID_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemma-4-31b-it', 'gemma-4-26b-a4b-it']
 
 analyzeRoute.post('/analyze', async (c) => {
   const body = await c.req.json<{

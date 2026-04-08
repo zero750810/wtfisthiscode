@@ -57,7 +57,7 @@ onUnmounted(() => {
 
         <!-- GitHub -->
         <a
-          href="https://github.com/zero750810/wtfisthiscode"
+          href="https://wtf.dev-pulse.org/"
           target="_blank"
           rel="noopener noreferrer"
           class="rounded-lg border border-zinc-700 p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
@@ -100,6 +100,9 @@ onUnmounted(() => {
               </option>
               <option value="gemma-4-31b-it">
                 Gemma 4 31B
+              </option>
+              <option value="gemma-4-26b-a4b-it">
+                Gemma 4 26B
               </option>
             </select>
             <label class="mb-1.5 block text-xs text-zinc-400">{{ t('header.apiKeyLabel') }}</label>
