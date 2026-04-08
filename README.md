@@ -46,9 +46,11 @@
 - Node.js >= 18
 - A [Gemini API Key](https://aistudio.google.com/apikey) (free tier available)
 
-> **Important / 注意：** This tool uses the **Google Gemini API** (specifically `gemini-2.5-flash`). Other AI providers (OpenAI, Anthropic, etc.) are **not supported**. You can get a free Gemini API key at [Google AI Studio](https://aistudio.google.com/apikey).
+> **Important / 注意：** This tool uses the **Google Gemini API**. Other AI providers (OpenAI, Anthropic, etc.) are **not supported**. You can get a free Gemini API key at [Google AI Studio](https://aistudio.google.com/apikey).
 >
-> 本工具使用 **Google Gemini API**（模型：`gemini-2.5-flash`），**不支援**其他 AI 服務商的 API Key（如 OpenAI、Anthropic 等）。請至 [Google AI Studio](https://aistudio.google.com/apikey) 免費申請 Gemini API Key。
+> 本工具使用 **Google Gemini API**，**不支援**其他 AI 服務商的 API Key（如 OpenAI、Anthropic 等）。請至 [Google AI Studio](https://aistudio.google.com/apikey) 免費申請 Gemini API Key。
+>
+> **Supported models / 支援模型：** `gemini-2.5-flash` (default), `gemini-2.5-pro`, `gemini-2.0-flash`, `gemma-4-31b-it`
 
 ### Setup / 安裝
 

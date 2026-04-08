@@ -2,6 +2,7 @@ export default {
   header: {
     apiKeySet: 'API Key ✓',
     apiKeyMissing: 'API Key',
+    modelLabel: 'AI 模型',
     apiKeyLabel: 'Gemini API Key',
     apiKeyPlaceholder: 'AIzaSy...',
     apiKeyHint: '僅支援 Gemini API Key，可至 Google AI Studio 免費申請',
