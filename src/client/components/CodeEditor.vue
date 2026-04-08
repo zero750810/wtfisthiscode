@@ -6,9 +6,9 @@ import { java } from '@codemirror/lang-java'
 import { javascript } from '@codemirror/lang-javascript'
 import { python } from '@codemirror/lang-python'
 import { rust } from '@codemirror/lang-rust'
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, syntaxHighlighting } from '@codemirror/language'
 import { EditorState } from '@codemirror/state'
-import { oneDark } from '@codemirror/theme-one-dark'
+import { oneDark, oneDarkHighlightStyle } from '@codemirror/theme-one-dark'
 import { EditorView, keymap, lineNumbers, placeholder } from '@codemirror/view'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAnalyzeStore } from '../stores/useAnalyze'
@@ -58,7 +58,7 @@ function createState(doc: string) {
       lineNumbers(),
       history(),
       bracketMatching(),
-      syntaxHighlighting(defaultHighlightStyle),
+      syntaxHighlighting(oneDarkHighlightStyle),
       oneDark,
       getLanguageExtension(detectedLang),
       placeholder('// 在這裡貼上你的程式碼...'),

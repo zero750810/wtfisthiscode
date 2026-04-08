@@ -8,39 +8,47 @@ interface AnalyzeParams {
 
 const THINKING_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro']
 const JSON_MODE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
+const GEMMA_MODELS = ['gemma-4-31b-it', 'gemma-4-26b-a4b-it']
 
 interface AnalysisResult {
-  title: string
-  description: string
   nodes: {
     id: string
     label: string
     type: string
-    code_snippet: string
-    line_start: number
-    line_end: number
   }[]
   edges: {
     from: string
     to: string
     label?: string
-    type: string
   }[]
-  mermaid: string
 }
 
 const DIAGRAM_TYPE_PROMPTS: Record<string, string> = {
-  flow: '程式的執行流程，包含條件分支、迴圈和錯誤處理。使用 flowchart TD 語法。',
-  callgraph: '函式之間的呼叫關係，誰呼叫了誰。使用 flowchart LR 語法。',
-  dataflow: '變數和資料如何在函式之間傳遞和轉換。使用 flowchart TD 語法。',
-  structure: 'class、module 或主要結構之間的關係。使用 classDiagram 語法。',
+  flow: '程式的執行流程，包含條件分支、迴圈和錯誤處理',
+  callgraph: '函式之間的呼叫關係，誰呼叫了誰',
+  dataflow: '變數和資料如何在函式之間傳遞和轉換',
+  structure: 'class、module 或主要結構之間的關係',
 }
 
 function buildPrompt(params: AnalyzeParams): string {
   const diagramDesc = DIAGRAM_TYPE_PROMPTS[params.diagramType] || DIAGRAM_TYPE_PROMPTS.flow
   const lang = params.language === 'auto' ? '自動偵測' : params.language
+  const supportsJsonMode = JSON_MODE_MODELS.includes(params.model)
+  const isGemma = GEMMA_MODELS.includes(params.model)
 
-  return `你是一個程式碼分析專家。分析以下程式碼，產出結構化的 JSON。
+  const jsonEnforcement = supportsJsonMode
+    ? ''
+    : `
+
+嚴格要求：你的回應必須是且僅是一個 JSON 物件。
+- 不要輸出任何思考過程、解釋、或 markdown
+- 不要在 JSON 前後加任何文字
+- 第一個字元必須是 {，最後一個字元必須是 }
+- 直接輸出 JSON，不要用 \`\`\` 包裹`
+
+  const thinkToken = isGemma ? '<|think|>\n\n' : ''
+
+  return `${thinkToken}你是一個程式碼分析專家。分析以下程式碼，產出結構化的 JSON。${jsonEnforcement}
 
 程式語言：${lang}
 視覺化類型：${params.diagramType}（${diagramDesc}）
@@ -50,40 +58,10 @@ function buildPrompt(params: AnalyzeParams): string {
 ${params.code}
 \`\`\`
 
-請回傳以下 JSON 格式（不要包含任何其他文字，不要用 markdown code block 包裝）：
-{
-  "title": "這段程式碼的一句話摘要",
-  "description": "2-3 句更詳細的說明",
-  "nodes": [
-    {
-      "id": "unique_id",
-      "label": "節點名稱（簡短）",
-      "type": "function | condition | loop | error_handling | return | variable",
-      "code_snippet": "對應的原始碼片段",
-      "line_start": 1,
-      "line_end": 5
-    }
-  ],
-  "edges": [
-    {
-      "from": "node_id_1",
-      "to": "node_id_2",
-      "label": "關係描述（可選）",
-      "type": "call | condition_true | condition_false | data | next"
-    }
-  ],
-  "mermaid": "完整的 Mermaid 語法字串（使用換行符 \\n 分隔每行）"
-}
+回傳 JSON（不要包含其他文字）：
+{"nodes":[{"id":"英文id","label":"簡短名稱","type":"function|condition|loop|error_handling|return|variable"}],"edges":[{"from":"id1","to":"id2","label":"可選說明"}]}
 
-重要規則：
-1. mermaid 欄位必須是有效的 Mermaid 語法，可以直接渲染
-2. 節點 id 使用英文和底線，不要用中文
-3. Mermaid 語法中的節點文字可以用中文
-4. 確保 edges 中的 from 和 to 都對應到 nodes 中存在的 id
-5. 只回傳 JSON，不要有任何其他文字
-6. Mermaid 節點標籤中禁止使用括號等特殊字元，這些字元在 Mermaid 中有特殊意義會導致解析錯誤。例如：用 "fibonacci n" 而非 "fibonacci(n)"，用 "i 從 2 到 n" 而非 "i=2; i<=n"
-7. Mermaid 節點標籤若含有特殊字元，必須用雙引號包裹，例如：A["標籤 (含括號)"]
-8. Mermaid 節點 id 不可使用保留字：end、subgraph、graph、flowchart、classDef、click、style。用 node_end 或 finish 取代 end`
+規則：id 用英文底線，label 可中文，edges 的 from/to 必須對應 nodes 的 id，id 禁用 end/subgraph/graph/flowchart`
 }
 
 const MD_BLOCK_START = /^```(?:json)?\s*/i
@@ -95,9 +73,13 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
   const isThinkingModel = THINKING_MODELS.includes(params.model)
   const supportsJsonMode = JSON_MODE_MODELS.includes(params.model)
 
+  const isGemmaModel = GEMMA_MODELS.includes(params.model)
+  // Gemma may still think despite disable token — give it room
+  const maxTokens = (isThinkingModel || isGemmaModel) ? 16384 : 4096
+
   const generationConfig: Record<string, unknown> = {
     temperature: 0,
-    maxOutputTokens: 32768,
+    maxOutputTokens: maxTokens,
   }
 
   if (supportsJsonMode) {
@@ -108,22 +90,45 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
     generationConfig.thinkingConfig = { thinkingBudget: 4096 }
   }
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig,
-      }),
-    },
-  )
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 120000)
+
+  let res: Response
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig,
+        }),
+        signal: controller.signal,
+      },
+    )
+  }
+  catch (e) {
+    clearTimeout(timeout)
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('AI 回應超時（>120秒），請換一個更快的模型')
+    }
+    throw e
+  }
+  finally {
+    clearTimeout(timeout)
+  }
 
   if (!res.ok) {
     const errorText = await res.text()
     console.error('Gemini API error:', res.status, errorText)
-    throw new Error('Gemini API 呼叫失敗')
+    if (res.status === 429) {
+      throw new Error('API 呼叫次數已達上限，請稍後再試')
+    }
+    if (res.status === 400) {
+      throw new Error(`模型 ${params.model} 不支援此請求，請換一個模型試試`)
+    }
+    throw new Error(`API 錯誤 (${res.status})，請確認 API Key 和模型是否正確`)
   }
 
   const data = await res.json() as {
@@ -141,23 +146,25 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
   }
 
   const parts = candidate?.content?.parts ?? []
+  // Always filter out thought parts — both Gemini thinking models and Gemma may produce them
   const text = parts
-    .filter(p => (!isThinkingModel || !p.thought) && p.text)
+    .filter(p => !p.thought && p.text)
     .map(p => p.text)
     .join('')
 
   if (!text) {
-    throw new Error('Gemini 未回傳有效內容')
+    console.error('No text in response. Parts:', JSON.stringify(parts.map(p => ({ thought: p.thought, textLen: p.text?.length }))))
+    throw new Error('AI 未回傳有效內容')
   }
 
-  // Strip markdown code blocks if present
+  console.error('Raw response (first 300):', text.slice(0, 300))
+
   let cleaned = text
     .replace(MD_BLOCK_START, '')
     .replace(MD_BLOCK_END, '')
     .trim()
 
-  // Model may output reasoning text before the JSON — extract the JSON object
-  const jsonStart = cleaned.indexOf('{')
+  const jsonStart = cleaned.indexOf('{"')
   const jsonEnd = cleaned.lastIndexOf('}')
   if (jsonStart !== -1 && jsonEnd > jsonStart) {
     cleaned = cleaned.slice(jsonStart, jsonEnd + 1)
@@ -172,9 +179,8 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
     throw new Error('AI 回傳格式異常，請再試一次')
   }
 
-  // Basic validation
-  if (!result.nodes || !result.edges || !result.mermaid) {
-    throw new Error('Gemini 回傳的格式不正確')
+  if (!result.nodes || !result.edges) {
+    throw new Error('AI 回傳的格式不正確')
   }
 
   return result
