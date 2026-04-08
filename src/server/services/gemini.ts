@@ -3,7 +3,11 @@ interface AnalyzeParams {
   language: string
   diagramType: string
   apiKey: string
+  model: string
 }
+
+const THINKING_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro']
+const JSON_MODE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash']
 
 interface AnalysisResult {
   title: string
@@ -88,21 +92,30 @@ const MD_BLOCK_END = /\n?```\s*$/
 export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult> {
   const prompt = buildPrompt(params)
 
+  const isThinkingModel = THINKING_MODELS.includes(params.model)
+  const supportsJsonMode = JSON_MODE_MODELS.includes(params.model)
+
+  const generationConfig: Record<string, unknown> = {
+    temperature: 0,
+    maxOutputTokens: 32768,
+  }
+
+  if (supportsJsonMode) {
+    generationConfig.responseMimeType = 'application/json'
+  }
+
+  if (isThinkingModel) {
+    generationConfig.thinkingConfig = { thinkingBudget: 4096 }
+  }
+
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${params.apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${params.model}:generateContent?key=${params.apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 32768,
-          responseMimeType: 'application/json',
-          thinkingConfig: {
-            thinkingBudget: 4096,
-          },
-        },
+        generationConfig,
       }),
     },
   )
@@ -127,10 +140,9 @@ export async function analyzeCode(params: AnalyzeParams): Promise<AnalysisResult
     throw new Error('程式碼太複雜，AI 回應被截斷，請縮短程式碼再試')
   }
 
-  // Gemini 2.5 Flash is a thinking model — skip thought parts, take the actual answer
   const parts = candidate?.content?.parts ?? []
   const text = parts
-    .filter(p => !p.thought && p.text)
+    .filter(p => (!isThinkingModel || !p.thought) && p.text)
     .map(p => p.text)
     .join('')
 

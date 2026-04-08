@@ -83,6 +83,25 @@ onUnmounted(() => {
             v-if="showApiKeyInput"
             class="absolute right-0 top-full z-10 mt-2 w-80 rounded-lg border border-zinc-700 bg-zinc-900 p-3 shadow-xl"
           >
+            <label class="mb-1.5 block text-xs text-zinc-400">{{ t('header.modelLabel') }}</label>
+            <select
+              :value="store.model"
+              class="mb-3 w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-sm text-zinc-200 outline-none focus:border-emerald-500"
+              @change="store.saveModel(($event.target as HTMLSelectElement).value as any)"
+            >
+              <option value="gemini-2.5-flash">
+                Gemini 2.5 Flash
+              </option>
+              <option value="gemini-2.5-pro">
+                Gemini 2.5 Pro
+              </option>
+              <option value="gemini-2.0-flash">
+                Gemini 2.0 Flash
+              </option>
+              <option value="gemma-4-31b-it">
+                Gemma 4 31B
+              </option>
+            </select>
             <label class="mb-1.5 block text-xs text-zinc-400">{{ t('header.apiKeyLabel') }}</label>
             <input
               type="password"

@@ -1,4 +1,4 @@
-import type { AnalysisResult, DiagramType, SupportedLanguage } from '../types'
+import type { AnalysisResult, DiagramType, SupportedLanguage, SupportedModel } from '../types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -13,6 +13,12 @@ export const useAnalyzeStore = defineStore('analyze', () => {
   const error = ref<string | null>(null)
   const loadingMessage = ref('')
   const apiKey = ref(localStorage.getItem('gemini-api-key') ?? '')
+  const model = ref<SupportedModel>((localStorage.getItem('ai-model') as SupportedModel) || 'gemini-2.5-flash')
+
+  function saveModel(m: SupportedModel) {
+    model.value = m
+    localStorage.setItem('ai-model', m)
+  }
 
   let messageInterval: ReturnType<typeof setInterval> | null = null
 
@@ -75,6 +81,7 @@ export const useAnalyzeStore = defineStore('analyze', () => {
           code: code.value,
           language: language.value,
           diagramType: diagramType.value,
+          model: model.value,
         }),
       })
 
@@ -103,7 +110,9 @@ export const useAnalyzeStore = defineStore('analyze', () => {
     error,
     loadingMessage,
     apiKey,
+    model,
     saveApiKey,
+    saveModel,
     analyze,
   }
 })

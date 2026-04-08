@@ -10,12 +10,14 @@ export const analyzeRoute = new Hono<{ Bindings: Env }>()
 const MAX_CODE_LENGTH = 10000
 const VALID_LANGUAGES = ['auto', 'javascript', 'typescript', 'python', 'go', 'rust', 'java', 'csharp']
 const VALID_DIAGRAM_TYPES = ['flow', 'callgraph', 'dataflow', 'structure']
+const VALID_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemma-4-31b-it']
 
 analyzeRoute.post('/analyze', async (c) => {
   const body = await c.req.json<{
     code: string
     language: string
     diagramType: string
+    model: string
   }>()
 
   // Input validation
@@ -33,6 +35,7 @@ analyzeRoute.post('/analyze', async (c) => {
 
   const language = VALID_LANGUAGES.includes(body.language) ? body.language : 'auto'
   const diagramType = VALID_DIAGRAM_TYPES.includes(body.diagramType) ? body.diagramType : 'flow'
+  const model = VALID_MODELS.includes(body.model) ? body.model : 'gemini-2.5-flash'
 
   const apiKey = c.req.header('X-API-Key') || c.env.GEMINI_API_KEY
   if (!apiKey) {
@@ -45,6 +48,7 @@ analyzeRoute.post('/analyze', async (c) => {
       language,
       diagramType,
       apiKey,
+      model,
     })
 
     return c.json(result)

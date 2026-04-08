@@ -3,6 +3,7 @@ import antfu from '@antfu/eslint-config'
 export default antfu({
   vue: true,
   typescript: true,
+  ignores: ['.vite/**'],
   rules: {
     'no-console': ['error', { allow: ['warn', 'error'] }],
     'no-empty': ['error', { allowEmptyCatch: false }],
